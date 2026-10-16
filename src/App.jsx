@@ -72,6 +72,13 @@ const [Edit,SetEdit] = useState(false)
 const [editingId,setEditingId] = useState(null)
 const [editText, setEditText] = useState("")
 
+const [journal,Setjournal] = useState(false)
+const [journalEntry,setJournalEntry] = useState("")
+const [journalId,setJournalId] = useState("")
+
+const [detailsId,setDetailsId] = useState("")
+const [showDetails,setShowDetails] = useState(false)
+
 const [annouce,setAnnouce] = useState("")
 
 function resetStats () {
@@ -156,11 +163,12 @@ function experienceAnnouncements (){
 }
 function confirmExperience () {
   const sound = new Audio(pointSound)
+  const newID = crypto.randomUUID()
   if (Experience.trim() === "" ){
    SetAlertMessage("Enter an experience")
   } else {
   setExperiences(previous => [...previous,{Text: Experience.trim(),
-    stat: selectedStat,id: crypto.randomUUID()
+    stat: selectedStat,id: newID,CreatedAt: new Date().toISOString(), 
   }])
   if (selectedStat === "Knowledge"){
     addKnowledge()
@@ -183,6 +191,9 @@ if (soundEnabled){
 } 
 experienceAnnouncements()
 setExperience("")
+Setjournal(true)
+setJournalId(newID)
+setJournalEntry("")
 }
 }
 
@@ -362,13 +373,21 @@ function saveExperience (){
   setEditText("")
   SetAlertMessage("")
 }
+function saveJournal (){
+  setExperiences(previous => previous.map(entry => entry.id === journalId ? {...entry,journal: journalEntry}: entry))
+  Setjournal(on => !on)
+}
+function theshowDetails (id){
+  setDetailsId(previous => previous === id ? null : id)
 
+}
   return (  
   <main>
     <h1>Your Experience</h1>
     <p>Your Own World</p>
     <div className="experience-controls">
     <input placeholder="Enter Your Experience" value={Experience} onChange={event => setExperience(event.target.value)}></input>
+    {journal ? <><input value={journalEntry} placeholder="Enter Journal" onChange={event => setJournalEntry(event.target.value)}></input><button onClick={saveJournal}>Comfirm Journal Entry</button></> : ""}
     <select value={selectedStat} onChange={event => setSelectedStat(event.target.value)}>
       <option value="Knowledge">Knowledge</option>
       <option value="Guts">Guts</option>
@@ -474,25 +493,196 @@ function saveExperience (){
        </select>
        <button onClick={() => setIsDeleting(previous => !previous)}>{isDeleting ? "Done" : "Delete"}</button>
        <button onClick={() => SetEdit(previous => !previous)}>{Edit ? "Done" : "Edit Experiences"}</button>
-     {historyFilter === "All" &&  Experiences.filter(entry => entry.Text.toLowerCase().includes(searchText.toLowerCase())).map((entry, index) => (<p key={entry.id}>{editingId === entry.id ? (
-  <input
-    value={editText}
-    onChange={event => setEditText(event.target.value)} />) : (entry.Text)} - {entry.stat} + 1{isDeleting && (<button  onClick={() => deleteExperience(entry.id)}>Delete</button>)}{Edit && <button onClick={() => {setEditingId(entry.id) ; setEditText(entry.Text)}}>Edit</button>}{editingId === entry.id && (<><button onClick={saveExperience}>Save</button><button onClick={() => {setEditingId(null);setEditText("");SetAlertMessage("")}}>Cancel</button></>)}</p>))}
+     {historyFilter === "All" && Experiences.filter(entry => entry.Text.toLowerCase().includes(searchText.toLowerCase())).map(entry => (
+        <div key={entry.id} className="experience-row">
+          <p>
+            {editingId === entry.id ? (
+              <input value={editText} onChange={event => setEditText(event.target.value)} />
+            ) : entry.Text} - {entry.stat} + 1
+            {isDeleting && (
+              <button onClick={() => deleteExperience(entry.id)}>Delete</button>
+            )}
+            {Edit && (
+              <button onClick={() => {
+                setEditingId(entry.id)
+                setEditText(entry.Text)
+              }}>Edit</button>
+            )}
+            {editingId === entry.id && (
+              <>
+                <button onClick={saveExperience}>Save</button>
+                <button onClick={() => {
+                  setEditingId(null)
+                  setEditText("")
+                  SetAlertMessage("")
+                }}>Cancel</button>
+              </>
+            )}
+            <button
+              onClick={() => theshowDetails(entry.id)}
+              aria-expanded={detailsId === entry.id}
+            >
+              {detailsId === entry.id ? "Hide Details" : "Show Details"}
+            </button>
+          </p>
+          {detailsId === entry.id && (
+            <div className="experience-details">
+              <p>Journal Entry: {entry.journal || "No journal yet."}</p>
+              <p>
+                Date and Time: {entry.CreatedAt && !Number.isNaN(new Date(entry.CreatedAt).getTime())
+                  ? new Date(entry.CreatedAt).toLocaleString()
+                  : "Date unavailable"}
+              </p>
+              <p>Stat Type: {entry.stat}</p>
+            </div>
+          )}
+        </div>
+      ))}
      {historyFilter === "All" && Experiences.length === 0 && <p>No Experiences Yet</p>}
      
-     {historyFilter === "Knowledge" && Experiences.filter(entry => entry.stat === "Knowledge").filter(entry => entry.Text.toLowerCase().includes(searchText.toLowerCase())).map(entry => (<p key={entry.id}>{entry.Text} - {entry.stat} +1{isDeleting && (<button  onClick={() => deleteExperience(entry.id)}>Delete</button>)}</p>))}
+     {historyFilter === "Knowledge" && Experiences.filter(entry => entry.stat === "Knowledge").filter(entry => entry.Text.toLowerCase().includes(searchText.toLowerCase())).map(entry => (
+        <div key={entry.id} className="experience-row">
+          <p>
+            {entry.Text} - {entry.stat} + 1
+            {isDeleting && (
+              <button onClick={() => deleteExperience(entry.id)}>Delete</button>
+            )}
+            <button
+              onClick={() => theshowDetails(entry.id)}
+              aria-expanded={detailsId === entry.id}
+            >
+              {detailsId === entry.id ? "Hide Details" : "Show Details"}
+            </button>
+          </p>
+          {detailsId === entry.id && (
+            <div className="experience-details">
+              <p>Journal Entry: {entry.journal || "No journal yet."}</p>
+              <p>
+                Date and Time: {entry.CreatedAt && !Number.isNaN(new Date(entry.CreatedAt).getTime())
+                  ? new Date(entry.CreatedAt).toLocaleString()
+                  : "Date unavailable"}
+              </p>
+              <p>Stat Type: {entry.stat}</p>
+            </div>
+          )}
+        </div>
+      ))}
      {historyFilter === "Knowledge" && Experiences.filter(entry => entry.stat === "Knowledge").length === 0 && <p>No Knowledge Experiences yet</p>}
 
-     {historyFilter === "Guts" && Experiences.filter(entry => entry.stat === "Guts").filter(entry => entry.Text.toLowerCase().includes(searchText.toLowerCase())).map(entry => (<p key={entry.id}>{entry.Text} - {entry.stat} +1{isDeleting && (<button  onClick={() => deleteExperience(entry.id)}>Delete</button>)}</p>))}
+     {historyFilter === "Guts" && Experiences.filter(entry => entry.stat === "Guts").filter(entry => entry.Text.toLowerCase().includes(searchText.toLowerCase())).map(entry => (
+        <div key={entry.id} className="experience-row">
+          <p>
+            {entry.Text} - {entry.stat} + 1
+            {isDeleting && (
+              <button onClick={() => deleteExperience(entry.id)}>Delete</button>
+            )}
+            <button
+              onClick={() => theshowDetails(entry.id)}
+              aria-expanded={detailsId === entry.id}
+            >
+              {detailsId === entry.id ? "Hide Details" : "Show Details"}
+            </button>
+          </p>
+          {detailsId === entry.id && (
+            <div className="experience-details">
+              <p>Journal Entry: {entry.journal || "No journal yet."}</p>
+              <p>
+                Date and Time: {entry.CreatedAt && !Number.isNaN(new Date(entry.CreatedAt).getTime())
+                  ? new Date(entry.CreatedAt).toLocaleString()
+                  : "Date unavailable"}
+              </p>
+              <p>Stat Type: {entry.stat}</p>
+            </div>
+          )}
+        </div>
+      ))}
      {historyFilter === "Guts" && Experiences.filter(entry => entry.stat === "Guts").length === 0 && <p>No Guts Experiences</p>}
      
-     {historyFilter === "Charm" && Experiences.filter(entry => entry.stat === "Charm").filter(entry => entry.Text.toLowerCase().includes(searchText.toLowerCase())).map(entry => (<p key={entry.id}>{entry.Text} - {entry.stat} +1{isDeleting && (<button  onClick={() => deleteExperience(entry.id)}>Delete</button>)}</p>))} 
+     {historyFilter === "Charm" && Experiences.filter(entry => entry.stat === "Charm").filter(entry => entry.Text.toLowerCase().includes(searchText.toLowerCase())).map(entry => (
+        <div key={entry.id} className="experience-row">
+          <p>
+            {entry.Text} - {entry.stat} + 1
+            {isDeleting && (
+              <button onClick={() => deleteExperience(entry.id)}>Delete</button>
+            )}
+            <button
+              onClick={() => theshowDetails(entry.id)}
+              aria-expanded={detailsId === entry.id}
+            >
+              {detailsId === entry.id ? "Hide Details" : "Show Details"}
+            </button>
+          </p>
+          {detailsId === entry.id && (
+            <div className="experience-details">
+              <p>Journal Entry: {entry.journal || "No journal yet."}</p>
+              <p>
+                Date and Time: {entry.CreatedAt && !Number.isNaN(new Date(entry.CreatedAt).getTime())
+                  ? new Date(entry.CreatedAt).toLocaleString()
+                  : "Date unavailable"}
+              </p>
+              <p>Stat Type: {entry.stat}</p>
+            </div>
+          )}
+        </div>
+      ))}
      {historyFilter === "Charm" && Experiences.filter(entry => entry.stat === "Charm").length === 0 && <p>No Charm Experiences</p>}
    
-     {historyFilter === "Kindness" && Experiences.filter(entry => entry.stat === "Kindness").filter(entry => entry.Text.toLowerCase().includes(searchText.toLowerCase())).map(entry => (<p key={entry.id}>{entry.Text} - {entry.stat} +1{isDeleting && (<button  onClick={() => deleteExperience(entry.id)}>Delete</button>)}</p>))}
+     {historyFilter === "Kindness" && Experiences.filter(entry => entry.stat === "Kindness").filter(entry => entry.Text.toLowerCase().includes(searchText.toLowerCase())).map(entry => (
+        <div key={entry.id} className="experience-row">
+          <p>
+            {entry.Text} - {entry.stat} + 1
+            {isDeleting && (
+              <button onClick={() => deleteExperience(entry.id)}>Delete</button>
+            )}
+            <button
+              onClick={() => theshowDetails(entry.id)}
+              aria-expanded={detailsId === entry.id}
+            >
+              {detailsId === entry.id ? "Hide Details" : "Show Details"}
+            </button>
+          </p>
+          {detailsId === entry.id && (
+            <div className="experience-details">
+              <p>Journal Entry: {entry.journal || "No journal yet."}</p>
+              <p>
+                Date and Time: {entry.CreatedAt && !Number.isNaN(new Date(entry.CreatedAt).getTime())
+                  ? new Date(entry.CreatedAt).toLocaleString()
+                  : "Date unavailable"}
+              </p>
+              <p>Stat Type: {entry.stat}</p>
+            </div>
+          )}
+        </div>
+      ))}
      {historyFilter === "Kindness" && Experiences.filter(entry => entry.stat === "Kindness").length === 0 && <p>No Kindness Experiences</p>}
    
-     {historyFilter === "Proficiency" && Experiences.filter(entry => entry.stat === "Proficiency").filter(entry => entry.Text.toLowerCase().includes(searchText.toLowerCase())).map(entry => (<p key={entry.id}>{entry.Text} - {entry.stat} +1{isDeleting && (<button  onClick={() => deleteExperience(entry.id)}>Delete</button>)}</p>))}
+     {historyFilter === "Proficiency" && Experiences.filter(entry => entry.stat === "Proficiency").filter(entry => entry.Text.toLowerCase().includes(searchText.toLowerCase())).map(entry => (
+        <div key={entry.id} className="experience-row">
+          <p>
+            {entry.Text} - {entry.stat} + 1
+            {isDeleting && (
+              <button onClick={() => deleteExperience(entry.id)}>Delete</button>
+            )}
+            <button
+              onClick={() => theshowDetails(entry.id)}
+              aria-expanded={detailsId === entry.id}
+            >
+              {detailsId === entry.id ? "Hide Details" : "Show Details"}
+            </button>
+          </p>
+          {detailsId === entry.id && (
+            <div className="experience-details">
+              <p>Journal Entry: {entry.journal || "No journal yet."}</p>
+              <p>
+                Date and Time: {entry.CreatedAt && !Number.isNaN(new Date(entry.CreatedAt).getTime())
+                  ? new Date(entry.CreatedAt).toLocaleString()
+                  : "Date unavailable"}
+              </p>
+              <p>Stat Type: {entry.stat}</p>
+            </div>
+          )}
+        </div>
+      ))}
      {historyFilter === "Proficiency" && Experiences.filter(entry => entry.stat === "Proficiency").length === 0 && <p>No Proficiency Experiences</p>}
     </section>
   </main>
