@@ -297,6 +297,15 @@
     align-items: stretch;
   }
 }
-
+.details-overlay{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: fixed;
+  inset: 0;
+  backdrop-filter: blur(6px);
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 1000;
+}
  
  
